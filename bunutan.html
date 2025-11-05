@@ -5,10 +5,28 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Secret Bunutan</title>
 <style>
-  body{font-family:Poppins,Arial,sans-serif;background:#f8f9fd;color:#222;text-align:center;padding:40px;}
-  h1{color:#333;}
-  button{padding:10px 20px;margin:10px;border:none;border-radius:8px;background:#4CAF50;color:white;font-size:16px;cursor:pointer;}
-  #drawn,#msg{margin-top:20px;font-size:20px;}
+  body {
+    font-family: Poppins, Arial, sans-serif;
+    background: #f8f9fd;
+    color: #222;
+    text-align: center;
+    padding: 40px;
+  }
+  h1 { color: #333; }
+  button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #4CAF50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  #drawn, #msg {
+    margin-top: 20px;
+    font-size: 20px;
+  }
 </style>
 </head>
 <body>
@@ -28,17 +46,28 @@ const allNames = [
   "Reigven","Reigson","Sanja","Simone","Clem","Kevin","Crispin"
 ];
 
-// === Storage for drawn results (shared in browser) ===
+// === Load storage for drawn results (shared per browser) ===
 let assigned = JSON.parse(localStorage.getItem("bunutan_assigned") || "{}");
 const params = new URLSearchParams(window.location.search);
-const currentUser = params.get("user");
+let currentUser = params.get("user");
 
-// === Validation ===
-if (!currentUser || !allNames.includes(currentUser)) {
-  document.body.innerHTML = "<h2>⚠️ Invalid or missing participant link.</h2>";
-  throw new Error("Invalid user");
+// === Validation (case-insensitive) ===
+if (!currentUser) {
+  document.body.innerHTML = "<h2>⚠️ Missing participant link.</h2>";
+  throw new Error("Missing user");
 }
 
+currentUser = currentUser.trim();
+
+// find match ignoring capitalization
+const match = allNames.find(n => n.toLowerCase() === currentUser.toLowerCase());
+if (!match) {
+  document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
+  throw new Error("Invalid user");
+}
+currentUser = match;
+
+// === Display welcome message ===
 document.getElementById("msg").innerHTML = `<b>Welcome, ${currentUser}!</b><br>Click below to reveal your bunot 🎁`;
 
 document.getElementById("drawBtn").onclick = () => {
