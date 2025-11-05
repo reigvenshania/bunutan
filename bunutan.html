@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Online Bunutan</title>
+<style>
+  body{font-family:Poppins,Arial,sans-serif;background:#f8f9fd;color:#222;text-align:center;padding:40px;}
+  h1{color:#333;}
+  textarea{width:80%;height:100px;padding:10px;border-radius:8px;border:1px solid #ccc;}
+  button{padding:10px 20px;margin:10px;border:none;border-radius:8px;background:#4CAF50;color:white;font-size:16px;cursor:pointer;}
+  #drawn,#msg{margin-top:20px;font-size:20px;}
+  #remaining{margin-top:10px;color:#666;}
+</style>
+</head>
+<body>
+
+<h1>🎁 Secret Bunutan</h1>
+<div id="setup">
+  <p>Enter all participant names (comma separated):</p>
+  <textarea id="nameList">Jannette, Haydee, Avegail, Jassen, Reigne, Reigen, Reigven, Reigson, Sanja, Simone, Clem, Kevin</textarea><br>
+  <button id="generateLinks">Generate Links</button>
+  <p id="links"></p>
+</div>
+
+<div id="drawSection" style="display:none;">
+  <p id="msg"></p>
+  <button id="drawBtn">Draw Your Bunot 🎲</button>
+  <div id="drawn"></div>
+</div>
+
+<script>
+let allNames = [];
+let assigned = JSON.parse(localStorage.getItem("bunutan_assigned") || "{}");
+const params = new URLSearchParams(window.location.search);
+const currentUser = params.get("user");
+const setup = document.getElementById("setup");
+const drawSection = document.getElementById("drawSection");
+
+if (!currentUser) {
+  setup.style.display = "block";
+  drawSection.style.display = "none";
+  document.getElementById("generateLinks").onclick = () => {
+    const names = document.getElementById("nameList").value.split(",").map(n=>n.trim()).filter(n=>n);
+    if (names.length < 2) return alert("Please enter at least 2 names!");
+    allNames = names;
+    localStorage.setItem("bunutan_names", JSON.stringify(allNames));
+    let html = "<h3>Share these links:</h3>";
+    const base = window.location.href.split("?")[0];
+    names.forEach(n=>{
+      const url = `${base}?user=${encodeURIComponent(n)}`;
+      html += `<div><a href="${url}" target="_blank">${n}'s Link</a></div>`;
+    });
+    document.getElementById("links").innerHTML = html;
+  };
+} else {
+  setup.style.display = "none";
+  drawSection.style.display = "block";
+  document.getElementById("msg").innerHTML = `<b>Welcome, ${currentUser}!</b><br>Click below to reveal your bunot 🎁`;
+  document.getElementById("drawBtn").onclick = () => {
+    const all = JSON.parse(localStorage.getItem("bunutan_names") || "[]");
+    if (!all.length) return alert("Organizer hasn’t set up the names yet!");
+    let used = Object.values(assigned);
+    let available = all.filter(n => !used.includes(n) && n !== currentUser);
+    if (!available.length) return alert("No more names left to assign!");
+    if (assigned[currentUser]) {
+      document.getElementById("drawn").innerHTML = `🎉 You already got: <b>${assigned[currentUser]}</b>`;
+      return;
+    }
+    const rand = Math.floor(Math.random() * available.length);
+    const chosen = available[rand];
+    assigned[currentUser] = chosen;
+    localStorage.setItem("bunutan_assigned", JSON.stringify(assigned));
+    document.getElementById("drawn").innerHTML = `🎉 You got: <b>${chosen}</b>`;
+    document.getElementById("drawBtn").disabled = true;
+  };
+}
+</script>
+
+</body>
+</html>
