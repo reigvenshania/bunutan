@@ -16,11 +16,12 @@
 <body>
 
 <h1>🎁 Secret Bunutan</h1>
+
 <div id="setup">
   <p>Enter all participant names (comma separated):</p>
   <textarea id="nameList">Jannette, Haydee, Avegail, Jassen, Reigne, Reigen, Reigven, Reigson, Sanja, Simone, Clem, Kevin</textarea><br>
   <button id="generateLinks">Generate Links</button>
-  <p id="links"></p>
+  <div id="links"></div>
 </div>
 
 <div id="drawSection" style="display:none;">
@@ -37,6 +38,7 @@ const currentUser = params.get("user");
 const setup = document.getElementById("setup");
 const drawSection = document.getElementById("drawSection");
 
+// === ORGANIZER MODE ===
 if (!currentUser) {
   setup.style.display = "block";
   drawSection.style.display = "none";
@@ -45,32 +47,51 @@ if (!currentUser) {
     if (names.length < 2) return alert("Please enter at least 2 names!");
     allNames = names;
     localStorage.setItem("bunutan_names", JSON.stringify(allNames));
-    let html = "<h3>Share these links:</h3>";
+    localStorage.setItem("bunutan_assigned", "{}"); // reset previous draws
+
     const base = window.location.href.split("?")[0];
+    let html = "<h3>Share these links:</h3>";
     names.forEach(n=>{
       const url = `${base}?user=${encodeURIComponent(n)}`;
       html += `<div><a href="${url}" target="_blank">${n}'s Link</a></div>`;
     });
     document.getElementById("links").innerHTML = html;
   };
-} else {
+}
+
+// === PARTICIPANT MODE ===
+else {
   setup.style.display = "none";
   drawSection.style.display = "block";
   document.getElementById("msg").innerHTML = `<b>Welcome, ${currentUser}!</b><br>Click below to reveal your bunot 🎁`;
+
   document.getElementById("drawBtn").onclick = () => {
     const all = JSON.parse(localStorage.getItem("bunutan_names") || "[]");
     if (!all.length) return alert("Organizer hasn’t set up the names yet!");
-    let used = Object.values(assigned);
+
+    // get all used names
+    let assignedList = JSON.parse(localStorage.getItem("bunutan_assigned") || "{}");
+    let used = Object.values(assignedList);
+
+    // available names exclude those already drawn AND yourself
     let available = all.filter(n => !used.includes(n) && n !== currentUser);
-    if (!available.length) return alert("No more names left to assign!");
-    if (assigned[currentUser]) {
-      document.getElementById("drawn").innerHTML = `🎉 You already got: <b>${assigned[currentUser]}</b>`;
+
+    if (assignedList[currentUser]) {
+      document.getElementById("drawn").innerHTML = `🎉 You already got: <b>${assignedList[currentUser]}</b>`;
       return;
     }
+    if (!available.length) {
+      document.getElementById("drawn").innerHTML = "⚠️ No more names left!";
+      return;
+    }
+
+    // random draw
     const rand = Math.floor(Math.random() * available.length);
     const chosen = available[rand];
-    assigned[currentUser] = chosen;
-    localStorage.setItem("bunutan_assigned", JSON.stringify(assigned));
+
+    assignedList[currentUser] = chosen;
+    localStorage.setItem("bunutan_assigned", JSON.stringify(assignedList));
+
     document.getElementById("drawn").innerHTML = `🎉 You got: <b>${chosen}</b>`;
     document.getElementById("drawBtn").disabled = true;
   };
