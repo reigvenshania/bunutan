@@ -10,104 +10,248 @@
     background: #f8f9fd;
     color: #222;
     text-align: center;
-    padding: 40px;
+    padding: 28px;
+    max-width: 900px;
+    margin: 0 auto;
   }
-  h1 { color: #333; margin-bottom: 10px; }
+  h1 { color: #333; margin-bottom: 6px; }
+  textarea {
+    width: 90%;
+    max-width: 700px;
+    height: 110px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    resize: vertical;
+    font-size: 15px;
+  }
+  .controls { margin-top: 12px; }
   button {
-    padding: 10px 20px;
-    margin: 10px;
+    padding: 10px 18px;
+    margin: 6px;
     border: none;
     border-radius: 8px;
     background: #4CAF50;
     color: white;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
   }
-  button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-  #drawn, #msg {
-    margin-top: 20px;
-    font-size: 20px;
-  }
-  .links {
-    margin-top: 40px;
-    font-size: 16px;
-  }
-  a {
-    color: #007bff;
-    text-decoration: none;
-  }
-  a:hover { text-decoration: underline; }
+  button.alt { background: #007bff; }
+  button.danger { background: #e74c3c; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  #drawn, #msg, #notice { margin-top: 18px; font-size: 18px; }
+  .links { margin-top: 18px; font-size: 16px; text-align: left; display:inline-block; }
+  .links a { color: #007bff; text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+  .small { font-size: 13px; color:#666; margin-top:8px; }
+  ul { padding-left: 18px; margin: 6px 0; }
 </style>
 </head>
 <body>
 
 <h1>🎁 Secret Bunutan</h1>
-<p id="msg"></p>
-<button id="drawBtn">Draw Your Bunot 🎲</button>
-<div id="drawn"></div>
+<p class="small">Organizer: paste participant names (comma separated) below, then click <b>Generate Links</b>.</p>
 
-<div class="links" id="links"></div>
+<!-- ORGANIZER AREA -->
+<div id="organizer">
+  <textarea id="nameList" placeholder="e.g. Ana, Ben, Carla, David"></textarea>
+  <div class="controls">
+    <button id="generateLinks">Generate Links</button>
+    <button id="showCurrent" class="alt">Show Current Names</button>
+    <button id="resetAll" class="danger">Reset All Draws</button>
+  </div>
+  <div id="links" class="links"></div>
+  <div id="notice" class="small"></div>
+</div>
+
+<!-- PARTICIPANT AREA -->
+<div id="participant" style="display:none;">
+  <p id="msg"></p>
+  <button id="drawBtn">Draw Your Bunot 🎲</button>
+  <div id="drawn"></div>
+  <div id="otherInfo" class="small"></div>
+</div>
 
 <script>
-const allNames = [
-  "Jannette","Haydee","Avegail","Jassen","Reigne","Reigen",
-  "Reigven","Reigson","Sanja","Simone","Clem","Kevin", "Crispin"
-];
+/*
+  Bunutan page:
+  - When no ?user param -> organizer view (input names, generate links)
+  - When ?user=NAME -> participant view (draw bunot)
+  - Names and assigned results are stored in localStorage keys:
+      - bunutan_names  (array)
+      - bunutan_assigned (object mapping drawer -> drawn)
+*/
 
-let assigned = JSON.parse(localStorage.getItem("bunutan_assigned") || "{}");
-const params = new URLSearchParams(window.location.search);
-let currentUser = params.get("user");
+// helper
+const qs = new URLSearchParams(window.location.search);
+let paramUser = qs.get('user');
+const organizerDiv = document.getElementById('organizer');
+const participantDiv = document.getElementById('participant');
+const nameListInput = document.getElementById('nameList');
+const linksDiv = document.getElementById('links');
+const notice = document.getElementById('notice');
+const msg = document.getElementById('msg');
+const drawnDiv = document.getElementById('drawn');
+const otherInfo = document.getElementById('otherInfo');
 
-// === Auto-generate participant links if no ?user= ===
-if (!currentUser) {
-  document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
-  let html = "<ul style='list-style:none;padding:0;'>";
-  allNames.forEach(name => {
-    html += `<li><a href="?user=${encodeURIComponent(name)}">${name}</a></li>`;
-  });
-  html += "</ul>";
-  document.getElementById("links").innerHTML = html;
-  document.getElementById("drawBtn").style.display = "none";
-  return;
+function loadNames() {
+  try {
+    return JSON.parse(localStorage.getItem('bunutan_names') || '[]');
+  } catch(e) { return []; }
+}
+function saveNames(arr) {
+  localStorage.setItem('bunutan_names', JSON.stringify(arr));
+}
+function loadAssigned() {
+  try {
+    return JSON.parse(localStorage.getItem('bunutan_assigned') || '{}');
+  } catch(e) { return {}; }
+}
+function saveAssigned(obj) {
+  localStorage.setItem('bunutan_assigned', JSON.stringify(obj));
 }
 
-currentUser = currentUser.trim();
-const match = allNames.find(n => n.toLowerCase() === currentUser.toLowerCase());
-if (!match) {
-  document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
-  throw new Error("Invalid user");
+// sanitize and split comma separated list
+function parseNames(text) {
+  return text.split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    // remove duplicates while preserving order (case-insensitive)
+    .filter((v, i, a) => a.findIndex(x => x.toLowerCase() === v.toLowerCase()) === i);
 }
-currentUser = match;
 
-document.getElementById("msg").innerHTML = `<b>Welcome, ${currentUser}!</b><br>Click below to reveal your bunot 🎁`;
-
-document.getElementById("drawBtn").onclick = () => {
-  let used = Object.values(assigned);
-  let available = allNames.filter(n => !used.includes(n) && n !== currentUser);
-
-  if (assigned[currentUser]) {
-    document.getElementById("drawn").innerHTML = `🎉 You already got: <b>${assigned[currentUser]}</b>`;
-    document.getElementById("drawBtn").disabled = true;
+// Organizer actions
+document.getElementById('generateLinks').onclick = () => {
+  const raw = nameListInput.value || '';
+  const names = parseNames(raw);
+  if (names.length < 2) {
+    alert('Please enter at least 2 participant names.');
     return;
   }
-
-  if (!available.length) {
-    document.getElementById("drawn").innerHTML = "⚠️ No more names left!";
-    document.getElementById("drawBtn").disabled = true;
-    return;
-  }
-
-  const rand = Math.floor(Math.random() * available.length);
-  const chosen = available[rand];
-  assigned[currentUser] = chosen;
-  localStorage.setItem("bunutan_assigned", JSON.stringify(assigned));
-
-  document.getElementById("drawn").innerHTML = `🎉 You got: <b>${chosen}</b>`;
-  document.getElementById("drawBtn").disabled = true;
+  saveNames(names);
+  // reset previous assigned results whenever organizer regenerates names
+  localStorage.setItem('bunutan_assigned', JSON.stringify({}));
+  renderLinks(names);
+  notice.innerText = '✅ Names saved and draws reset. Share the generated links with participants.';
 };
+
+document.getElementById('showCurrent').onclick = () => {
+  const cur = loadNames();
+  if (!cur.length) {
+    alert('No current names saved.');
+  } else {
+    nameListInput.value = cur.join(', ');
+    renderLinks(cur);
+  }
+};
+
+document.getElementById('resetAll').onclick = () => {
+  if (!confirm('Reset all saved draws? This clears all assigned results for everyone.')) return;
+  localStorage.removeItem('bunutan_assigned');
+  notice.innerText = '✅ All draws reset.';
+  renderLinks(loadNames());
+};
+
+// render list of per-person links (relative links using same file)
+function renderLinks(names) {
+  if (!names || !names.length) {
+    linksDiv.innerHTML = '';
+    return;
+  }
+  const base = window.location.href.split('?')[0];
+  let html = '<strong>Participant links:</strong><ul>';
+  names.forEach(n => {
+    const url = `${base}?user=${encodeURIComponent(n)}`;
+    html += `<li><a href="${url}">${n}</a> — <small style="color:#666">${url}</small></li>`;
+  });
+  html += '</ul>';
+  html += '<div class="small">Tip: copy each link and send privately to each participant.</div>';
+  linksDiv.innerHTML = html;
+}
+
+// Participant actions (when ?user present)
+if (paramUser) {
+  // switch to participant view
+  organizerDiv.style.display = 'none';
+  participantDiv.style.display = 'block';
+
+  const allNames = loadNames(); // org must have saved names first
+  if (!allNames.length) {
+    document.body.innerHTML = `<h2>⚠️ Organizer hasn't saved the participant list yet.</h2>
+      <p class="small">Organizer: open the page without <code>?user=</code> and add names, then click Generate Links.</p>`;
+    throw new Error('No participant list');
+  }
+
+  // find a case-insensitive match and normalize to stored name
+  const userTrim = paramUser.trim();
+  const match = allNames.find(n => n.toLowerCase() === userTrim.toLowerCase());
+  if (!match) {
+    document.body.innerHTML = `<h2>⚠️ Invalid participant link.</h2>
+      <p class="small">Make sure the link matches one of the organizer-provided names.</p>`;
+    throw new Error('Invalid user');
+  }
+  const currentUser = match;
+
+  msg.innerHTML = `<b>Welcome, ${currentUser}!</b><br>Click the button to reveal your bunot 🎁`;
+
+  const drawBtn = document.getElementById('drawBtn');
+  drawBtn.onclick = () => {
+    let assigned = loadAssigned();
+    // if already assigned to this user, show it
+    if (assigned[currentUser]) {
+      drawnDiv.innerHTML = `🎉 You already got: <b>${assigned[currentUser]}</b>`;
+      drawBtn.disabled = true;
+      return;
+    }
+
+    // compute currently used names
+    const used = Object.values(assigned);
+
+    // available = allNames minus used and minus self
+    const available = allNames.filter(n => !used.includes(n) && n !== currentUser);
+
+    if (!available.length) {
+      drawnDiv.innerHTML = "⚠️ No more names left!";
+      drawBtn.disabled = true;
+      return;
+    }
+
+    const rand = Math.floor(Math.random() * available.length);
+    const chosen = available[rand];
+
+    assigned[currentUser] = chosen;
+    saveAssigned(assigned);
+    drawnDiv.innerHTML = `🎉 You got: <b>${chosen}</b>`;
+    drawBtn.disabled = true;
+  };
+
+  // show if already drawn on this browser
+  const assignedNow = loadAssigned();
+  if (assignedNow[currentUser]) {
+    drawnDiv.innerHTML = `🎉 You already got: <b>${assignedNow[currentUser]}</b>`;
+    document.getElementById('drawBtn').disabled = true;
+  }
+
+  // show small list of remaining count
+  const updateOtherInfo = () => {
+    const assignedNow = loadAssigned();
+    const used = Object.values(assignedNow);
+    const remaining = allNames.filter(n => !used.includes(n));
+    otherInfo.innerText = `${remaining.length} name(s) remaining.`;
+  };
+  updateOtherInfo();
+} else {
+  // organizer view: prefill textarea with any previously saved names (if exists)
+  const cur = loadNames();
+  if (cur.length) {
+    nameListInput.value = cur.join(', ');
+    renderLinks(cur);
+    notice.innerText = 'Loaded saved names. Click Generate Links to reset draws or update names.';
+  } else {
+    // default placeholder sample
+    nameListInput.value = 'Jannette, Haydee, Avegail, Jassen, Reigne, Reigen, Reigven, Reigson, Sanja, Simone, Clem, Kevin, Crispin';
+  }
+}
 </script>
 
 </body>
