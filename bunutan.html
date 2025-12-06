@@ -43,6 +43,11 @@
     text-decoration: none;
   }
   a:hover { text-decoration: underline; }
+  .error {
+    color: #b00020;
+    font-weight: 600;
+    margin-top: 20px;
+  }
 </style>
 
 </head>
@@ -54,8 +59,14 @@
 <button id="drawBtn">Click me! 🎲</button>
 <div id="drawn"></div>
 <div class="links" id="links"></div>
+<div id="validation" class="error" aria-live="polite"></div>
 
 <script>
+/*
+  Fixed assignments mapping.
+  Keep it here (JSON-style object). If you change names or assignments,
+  the page will validate the mapping for duplicates and self-assignments.
+*/
 const fixedAssignments = {
   "Clem": "Sanja",
   "Elmo": "Simone",
@@ -68,46 +79,107 @@ const fixedAssignments = {
   "Simone": "Kevin"
 };
 
-const officialNames = Object.keys(fixedAssignments);
-const params = new URLSearchParams(window.location.search);
-let user = params.get("user");
+// --- Validation: ensure no duplicate assignees and no self-assignments ---
+const officialNames = Object.keys(fixedAssignments).slice(); // participants
+const assignedTo = Object.values(fixedAssignments);
 
-// === Show all participant links if no ?user provided ===
-if (!user) {
-  document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
-  let html = "<ul style='list-style:none;padding:0;'>";
-  officialNames.forEach(name => {
-    html += `<li><a href="?user=${encodeURIComponent(name)}">${name}</a></li>`;
+// helper to find duplicates in an array
+function findDuplicates(arr) {
+  const seen = new Set();
+  const dups = new Set();
+  arr.forEach(v => {
+    if (seen.has(v)) dups.add(v);
+    seen.add(v);
   });
-  html += "</ul>";
-  document.getElementById("links").innerHTML = html;
-  document.getElementById("drawBtn").style.display = "none";
-} else {
-  // === Normalize username and match ===
-  user = officialNames.find(n => n.toLowerCase() === user.toLowerCase());
-  if (!user) {
-    document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
-    return;
+  return Array.from(dups);
+}
+
+const duplicateAssignees = findDuplicates(assignedTo);
+const selfAssigned = officialNames.filter(name => fixedAssignments[name] === name);
+
+// check that assignedTo is a permutation of officialNames (same multiset)
+function isPermutation(keys, values) {
+  if (keys.length !== values.length) return false;
+  const cnt = {};
+  keys.forEach(k => cnt[k] = (cnt[k] || 0) + 1);
+  values.forEach(v => {
+    if (!cnt[v]) cnt[v] = (cnt[v] || 0) - 1;
+    else cnt[v]--;
+  });
+  return Object.values(cnt).every(c => c === 0);
+}
+
+const mappingValid = duplicateAssignees.length === 0 &&
+                     selfAssigned.length === 0 &&
+                     isPermutation(officialNames, assignedTo);
+
+// If mapping invalid, show error and stop interactive reveal
+if (!mappingValid) {
+  const issues = [];
+  if (duplicateAssignees.length) {
+    issues.push("Duplicate assignees detected: " + duplicateAssignees.join(", "));
   }
-
+  if (selfAssigned.length) {
+    issues.push("Self-assignment(s) detected: " + selfAssigned.join(", "));
+  }
+  if (!isPermutation(officialNames, assignedTo)) {
+    issues.push("Assigned names are not the same set as participants (missing or extra names).");
+  }
+  document.getElementById("validation").textContent = "⚠️ Mapping error — " + issues.join(" • ");
+  // show basic participant list but disable draw button
   document.getElementById("msg").innerHTML = `
-    <b>Welcome, ${user}!</b><br>
-    Welcome to our exchange gift bunutan! Your assigned name will be picked randomly thru spin the wheel,
-    so get ready to find out who you'll be giving a gift to this year. When you're ready,
-    proceed to reveal your assigned person for the exchange gift.<br><br>
-    Participant's for this year's exchange gift:<br><br>
-    Clem<br>Elmo<br>Kevin<br>Reigen<br>Reigne<br>Reigven<br>Sanja<br>Sev<br>Simone
-    <br><br>Ready? Reveal your bunot below.<br>
+    <b>Participant list (mapping invalid)</b><br>
+    Please check the assignments mapping. Participants:<br><br>
+    ${officialNames.join("<br>")}
   `;
+  document.getElementById("links").innerHTML = "<p>Please contact the organizer to fix the assignments.</p>";
+  document.getElementById("drawBtn").disabled = true;
+} else {
+  // === Normal operation when mapping is valid ===
+  const params = new URLSearchParams(window.location.search);
+  let user = params.get("user");
 
-  const drawBtn = document.getElementById("drawBtn");
+  // === Show all participant links if no ?user provided ===
+  if (!user) {
+    document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
+    let html = "<ul style='list-style:none;padding:0;margin:0;'>";
+    officialNames.forEach(name => {
+      // use encodeURIComponent for safety and include current pathname
+      html += `<li style="margin:6px 0;"><a href="${location.pathname}?user=${encodeURIComponent(name)}">${name}</a></li>`;
+    });
+    html += "</ul>";
+    document.getElementById("links").innerHTML = html;
+    // hide draw button since no specific user selected
+    document.getElementById("drawBtn").style.display = "none";
+  } else {
+    // === Normalize username and match case-insensitively ===
+    const matched = officialNames.find(n => n.toLowerCase() === user.toLowerCase());
+    if (!matched) {
+      document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
+      return;
+    }
+    user = matched;
 
-  drawBtn.onclick = () => {
-    const result = fixedAssignments[user];
-    document.getElementById("drawn").innerHTML =
-      `🎉 You got: <b>${result}</b>`;
-    drawBtn.disabled = true;
-  };
+    document.getElementById("msg").innerHTML = `
+      <b>Welcome, ${user}!</b><br>
+      Welcome to our exchange gift bunutan! Your assigned name will be picked randomly thru spin the wheel,
+      so get ready to find out who you'll be giving a gift to this year. When you're ready,
+      proceed to reveal your assigned person for the exchange gift.<br><br>
+      Participants for this year's exchange gift:<br><br>
+      Clem<br>Elmo<br>Kevin<br>Reigen<br>Reigne<br>Reigven<br>Sanja<br>Sev<br>Simone
+      <br><br>Ready? Reveal your bunot below.<br>
+    `;
+
+    const drawBtn = document.getElementById("drawBtn");
+
+    drawBtn.onclick = () => {
+      // reveal the fixed assignment
+      const result = fixedAssignments[user];
+      document.getElementById("drawn").innerHTML =
+        `🎉 You got: <b>${result}</b>`;
+      drawBtn.disabled = true;
+    };
+  }
 }
 </script>
 
