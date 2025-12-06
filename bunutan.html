@@ -56,105 +56,56 @@
 <div class="links" id="links"></div>
 
 <script>
-const assignedKey = "bunutan_assigned_v2";
+const fixedAssignments = {
+  "Clem": "Sanja",
+  "Elmo": "Simone",
+  "Kevin": "Reigven",
+  "Reigen": "Clem",
+  "Reigne": "Elmo",
+  "Reigven": "Sev",
+  "Sanja": "Reigen",
+  "Sev": "Reigne",
+  "Simone": "Kevin"
+};
+
+const officialNames = Object.keys(fixedAssignments);
 const params = new URLSearchParams(window.location.search);
 let user = params.get("user");
 
-// Load assigned data from browser storage
-function saveAssigned(obj){ localStorage.setItem(assignedKey, JSON.stringify(obj)); }
-function loadAssigned(){ return JSON.parse(localStorage.getItem(assignedKey) || "{}"); }
-
-// Official participant list
-const officialNames = [
-  "Clem","Elmo","Kevin","Reigen","Reigne",
-  "Reigven","Sanja","Sev","Simone"
-];
-
-fetch("names.json")
-  .then(r => r.json())
-  .then(fileNames => {
-
-    // Filter to only use official participants
-    const allNames = fileNames.filter(n =>
-      officialNames.map(x => x.toLowerCase()).includes(n.toLowerCase())
-    );
-
-    // === Show participant links if no ?user provided ===
-    if (!user) {
-      document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
-      let html = "<ul style='list-style:none;padding:0;'>";
-
-      allNames.forEach(name => {
-        html += `<li><a href="?user=${encodeURIComponent(name)}">${name}</a></li>`;
-      });
-
-      html += "</ul>";
-      document.getElementById("links").innerHTML = html;
-      document.getElementById("drawBtn").style.display = "none";
-      return;
-    }
-
-    // === Normalize username and match ===
-    user = user.trim();
-    const match = allNames.find(n => n.toLowerCase() === user.toLowerCase());
-
-    if (!match) {
-      document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
-      return;
-    }
-
-    user = match;
-
-    document.getElementById("msg").innerHTML = `
-      <b>Welcome, ${user}!</b><br>
-      Welcome to our exchange gift bunutan! Your assigned name will be picked randomly,
-      so get ready to find out who you'll be giving a gift to this year. When you're ready,
-      proceed to reveal your assigned person for the exchange gift.<br><br>
-      Participant's for this year's exchange gift:<br><br>
-      Clem<br>Elmo<br>Kevin<br>Reigen<br>Reigne<br>Reigven<br>Sanja<br>Sev<br>Simone
-      <br><br>Ready? Reveal your bunot below.<br>
-    `;
-
-    const drawBtn = document.getElementById("drawBtn");
-
-    drawBtn.onclick = () => {
-      let assigned = loadAssigned();
-
-      // Already picked
-      if (assigned[user]) {
-        document.getElementById("drawn").innerHTML =
-          `This year, you got: <b>${assigned[user]}</b>`;
-        drawBtn.disabled = true;
-        return;
-      }
-
-      const used = Object.values(assigned);
-      const available = allNames.filter(n => !used.includes(n) && n !== user);
-
-      if (!available.length) {
-        document.getElementById("drawn").innerHTML = "⚠️ No more names left!";
-        drawBtn.disabled = true;
-        return;
-      }
-
-      const chosen = available[Math.floor(Math.random() * available.length)];
-      assigned[user] = chosen;
-      saveAssigned(assigned);
-
-      document.getElementById("drawn").innerHTML =
-        `🎉 You got: <b>${chosen}</b>`;
-      drawBtn.disabled = true;
-    };
-  })
-  .catch(err => {
-    document.body.innerHTML = `
-      <h2>⚠️ Organizer hasn't uploaded the participant list yet.</h2>
-      <p>Organizer: please add a <b>names.json</b> file in the same GitHub folder.</p>
-    `;
-    console.error(err);
+if (!user) {
+  document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
+  let html = "<ul style='list-style:none;padding:0;'>";
+  officialNames.forEach(name => {
+    html += `<li><a href="?user=${encodeURIComponent(name)}">${name}</a></li>`;
   });
+  html += "</ul>";
+  document.getElementById("links").innerHTML = html;
+  document.getElementById("drawBtn").style.display = "none";
+} else {
+  user = officialNames.find(n => n.toLowerCase() === user.toLowerCase());
+  if (!user) {
+    document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
+    return;
+  }
+
+  document.getElementById("msg").innerHTML = `
+    <b>Welcome, ${user}!</b><br>
+    Welcome to our exchange gift bunutan!<br><br>
+    Participant's for this year's exchange gift:<br><br>
+    Clem<br>Elmo<br>Kevin<br>Reigen<br>Reigne<br>Reigven<br>Sanja<br>Sev<br>Simone
+    <br><br>Ready? Reveal your bunot below.<br>
+  `;
+
+  const drawBtn = document.getElementById("drawBtn");
+
+  drawBtn.onclick = () => {
+    const result = fixedAssignments[user];
+    document.getElementById("drawn").innerHTML =
+      `🎉 You got: <b>${result}</b>`;
+    drawBtn.disabled = true;
+  };
+}
 </script>
 
 </body>
 </html>
-
