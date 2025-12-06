@@ -72,6 +72,7 @@ const officialNames = Object.keys(fixedAssignments);
 const params = new URLSearchParams(window.location.search);
 let user = params.get("user");
 
+// === Show all participant links if no ?user provided ===
 if (!user) {
   document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
   let html = "<ul style='list-style:none;padding:0;'>";
@@ -82,6 +83,7 @@ if (!user) {
   document.getElementById("links").innerHTML = html;
   document.getElementById("drawBtn").style.display = "none";
 } else {
+  // === Normalize username and match ===
   user = officialNames.find(n => n.toLowerCase() === user.toLowerCase());
   if (!user) {
     document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
@@ -90,7 +92,9 @@ if (!user) {
 
   document.getElementById("msg").innerHTML = `
     <b>Welcome, ${user}!</b><br>
-    Welcome to our exchange gift bunutan!<br><br>
+    Welcome to our exchange gift bunutan! Your assigned name will be picked randomly thru spin the wheel,
+    so get ready to find out who you'll be giving a gift to this year. When you're ready,
+    proceed to reveal your assigned person for the exchange gift.<br><br>
     Participant's for this year's exchange gift:<br><br>
     Clem<br>Elmo<br>Kevin<br>Reigen<br>Reigne<br>Reigven<br>Sanja<br>Sev<br>Simone
     <br><br>Ready? Reveal your bunot below.<br>
