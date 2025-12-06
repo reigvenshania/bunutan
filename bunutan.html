@@ -1,3 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title> Online Bunutan 2025 </title>
+
+<style>
+  body {
+    font-family: Poppins, Arial, sans-serif;
+    background: #f8f9fd;
+    color: #222;
+    text-align: center;
+    padding: 40px;
+  }
+  h1 { color: #333; margin-bottom: 10px; }
+  button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #4CAF50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover { background: #45a049; }
+  button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  #drawn, #msg {
+    margin-top: 20px;
+    font-size: 20px;
+  }
+  .links {
+    margin-top: 40px;
+    font-size: 16px;
+  }
+  a {
+    color: #007bff;
+    text-decoration: none;
+  }
+  a:hover { text-decoration: underline; }
+</style>
+
+</head>
+<body>
+
+<h1> Online Bunutan 2025 </h1>
+
+<p id="msg"></p>
+<button id="drawBtn">Reveal Your Bunot 🎲</button>
+<div id="drawn"></div>
+<div class="links" id="links"></div>
+
 <script>
 const assignedKey = "bunutan_assigned_v2";
 const params = new URLSearchParams(window.location.search);
@@ -7,58 +64,66 @@ let user = params.get("user");
 function saveAssigned(obj){ localStorage.setItem(assignedKey, JSON.stringify(obj)); }
 function loadAssigned(){ return JSON.parse(localStorage.getItem(assignedKey) || "{}"); }
 
-// Fetch participant list from names.json
+// Official participant list
+const officialNames = [
+  "Clem","Elmo","Kevin","Reigen","Reigne",
+  "Reigven","Sanja","Sev","Simone"
+];
+
 fetch("names.json")
   .then(r => r.json())
   .then(fileNames => {
 
-    // --- FILTER to ensure only the 9 real participants are used ---
-    const officialNames = [
-      "Clem","Elmo","Kevin","Reigen","Reigne",
-      "Reigven","Sanja","Sev","Simone"
-    ];
-
-    // Remove anything not part of the official 9
+    // Filter to only use official participants
     const allNames = fileNames.filter(n =>
       officialNames.map(x => x.toLowerCase()).includes(n.toLowerCase())
     );
 
-    // === Show list of participants for selecting ===
+    // === Show participant links if no ?user provided ===
     if (!user) {
       document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
       let html = "<ul style='list-style:none;padding:0;'>";
+
       allNames.forEach(name => {
         html += `<li><a href="?user=${encodeURIComponent(name)}">${name}</a></li>`;
       });
+
       html += "</ul>";
       document.getElementById("links").innerHTML = html;
       document.getElementById("drawBtn").style.display = "none";
       return;
     }
 
-    // === Normalize username and validate ===
+    // === Normalize username and match ===
     user = user.trim();
     const match = allNames.find(n => n.toLowerCase() === user.toLowerCase());
+
     if (!match) {
       document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
       return;
     }
+
     user = match;
 
-    // Welcome message
     document.getElementById("msg").innerHTML = `
       <b>Welcome, ${user}!</b><br>
-      Participants:<br><br>${allNames.join("<br>")}
+      Welcome to our exchange gift bunutan! Your assigned name will be picked randomly,
+      so get ready to find out who you'll be giving a gift to this year. When you're ready,
+      proceed to reveal your assigned person for the exchange gift.<br><br>
+      Participant's for this year's exchange gift:<br><br>
+      Clem<br>Elmo<br>Kevin<br>Reigen<br>Reigne<br>Reigven<br>Sanja<br>Sev<br>Simone
       <br><br>Ready? Reveal your bunot below.<br>
     `;
 
     const drawBtn = document.getElementById("drawBtn");
+
     drawBtn.onclick = () => {
       let assigned = loadAssigned();
 
-      // Already drawn
+      // Already picked
       if (assigned[user]) {
-        document.getElementById("drawn").innerHTML = `This year, you got: <b>${assigned[user]}</b>`;
+        document.getElementById("drawn").innerHTML =
+          `This year, you got: <b>${assigned[user]}</b>`;
         drawBtn.disabled = true;
         return;
       }
@@ -72,19 +137,23 @@ fetch("names.json")
         return;
       }
 
-      // Pick random person
       const chosen = available[Math.floor(Math.random() * available.length)];
       assigned[user] = chosen;
       saveAssigned(assigned);
 
-      document.getElementById("drawn").innerHTML = `🎉 You got: <b>${chosen}</b>`;
+      document.getElementById("drawn").innerHTML =
+        `🎉 You got: <b>${chosen}</b>`;
       drawBtn.disabled = true;
     };
   })
   .catch(err => {
     document.body.innerHTML = `
       <h2>⚠️ Organizer hasn't uploaded the participant list yet.</h2>
-      <p>Please add <b>names.json</b> in the same folder.</p>`;
+      <p>Organizer: please add a <b>names.json</b> file in the same GitHub folder.</p>
+    `;
     console.error(err);
   });
 </script>
+
+</body>
+</html>
