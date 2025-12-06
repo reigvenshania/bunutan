@@ -1,1 +1,11 @@
-["Clem","Elmo","Kevin","Reigven","Reigen","Reigne","Sanja","Sev","Simone"]
+{
+  "Clem": "Sanja",
+  "Elmo": "Simone",
+  "Kevin": "Reigven",
+  "Reigen": "Clem",
+  "Reigne": "Elmo",
+  "Reigven": "Sev",
+  "Sanja": "Reigen",
+  "Sev": "Reigne",
+  "Simone": "Kevin"
+}
