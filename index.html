@@ -40,79 +40,81 @@
   <div class="links" id="links"></div>
 
   <script>
-    // 🔒 FIXED ASSIGNMENT (DERANGEMENT)
-    const fixedAssignments = {
-      "Clem": "Sanja",
-      "Elmo": "Simone",
-      "Kevin": "Reigven",
-      "Reigen": "Clem",
-      "Reigne": "Elmo",
-      "Reigven": "Sev",
-      "Sanja": "Reigen",
-      "Sev": "Reigne",
-      "Simone": "Kevin"
-    };
+    window.onload = () => {
 
-    const participants = Object.keys(fixedAssignments);
+      // FIXED ASSIGNMENT
+      const fixedAssignments = {
+        "Clem": "Sanja",
+        "Elmo": "Simone",
+        "Kevin": "Reigven",
+        "Reigen": "Clem",
+        "Reigne": "Elmo",
+        "Reigven": "Sev",
+        "Sanja": "Reigen",
+        "Sev": "Reigne",
+        "Simone": "Kevin"
+      };
 
-    const params = new URLSearchParams(window.location.search);
-    let user = params.get("user");
+      const participants = Object.keys(fixedAssignments);
 
-    // 🟦 If no user specified → show name list
-    if (!user) {
-      document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
+      const params = new URLSearchParams(window.location.search);
+      let user = params.get("user");
 
-      let html = "<ul style='list-style:none;padding:0;'>";
-      participants.forEach(name => {
-        html += `<li><a href="?user=${encodeURIComponent(name)}">${name}</a></li>`;
-      });
-      html += "</ul>";
+      // If no user → show clickable name list
+      if (!user) {
+        document.getElementById("msg").innerHTML = "<b>Click your name below to join:</b>";
 
-      document.getElementById("links").innerHTML = html;
-      document.getElementById("drawBtn").style.display = "none";
-      return;
-    }
+        let html = "<ul style='list-style:none;padding:0;'>";
+        participants.forEach(name => {
+          html += `<li><a href="?user=${encodeURIComponent(name)}">${name}</a></li>`;
+        });
+        html += "</ul>";
 
-    // Normalize user input
-    user = user.trim();
-    const match = participants.find(
-      n => n.toLowerCase() === user.toLowerCase()
-    );
+        document.getElementById("links").innerHTML = html;
+        document.getElementById("drawBtn").style.display = "none";
+        return;
+      }
 
-    if (!match) {
-      document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
-      return;
-    }
+      // Normalize user input
+      user = user.trim();
+      const match = participants.find(
+        n => n.toLowerCase() === user.toLowerCase()
+      );
 
-    user = match;
+      if (!match) {
+        document.body.innerHTML = "<h2>⚠️ Invalid participant link.</h2>";
+        return;
+      }
 
-    // ⭐ Inserted YOUR TEXT here
-    document.getElementById("msg").innerHTML = `
-      <b>Welcome, ${user}!</b><br>
-      Welcome to our exchange gift bunutan! Your assigned name will be picked randomly, so get ready to find out who you'll be giving a gift to this year.
-      When you're ready, proceed to reveal your assigned person for the exchange gift.<br><br>
+      user = match;
 
-      Participant's for this year's exchange gift:<br><br>
-      Clem<br>
-      Elmo<br>
-      Kevin<br>
-      Reigen<br>
-      Reigne<br>
-      Reigven<br>
-      Sanja<br>
-      Sev<br>
-      Simone<br><br>
+      // Greeting text
+      document.getElementById("msg").innerHTML = `
+        <b>Welcome, ${user}!</b><br>
+        Welcome to our exchange gift bunutan! Your assigned name will be revealed once you click the button below.<br><br>
 
-      Ready? Reveal your bunot below.<br>
-    `;
+        Participants for this year's exchange gift:<br><br>
+        Clem<br>
+        Elmo<br>
+        Kevin<br>
+        Reigen<br>
+        Reigne<br>
+        Reigven<br>
+        Sanja<br>
+        Sev<br>
+        Simone<br><br>
 
-    // Reveal the fixed assigned person
-    const drawBtn = document.getElementById("drawBtn");
+        Ready? Reveal your bunot below.<br>
+      `;
 
-    drawBtn.onclick = () => {
-      const result = fixedAssignments[user];
-      document.getElementById("drawn").innerHTML = `🎉 You got: <b>${result}</b>`;
-      drawBtn.disabled = true;
+      // Reveal assignment
+      const drawBtn = document.getElementById("drawBtn");
+
+      drawBtn.onclick = () => {
+        const result = fixedAssignments[user];
+        document.getElementById("drawn").innerHTML = `🎉 You got: <b>${result}</b>`;
+        drawBtn.disabled = true;
+      };
     };
   </script>
 </body>
